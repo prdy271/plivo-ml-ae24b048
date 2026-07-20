@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LLM Assignment Summary</title>
+
+<style>
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    margin:40px;
+    background:#f5f7fa;
+    color:#222;
+    line-height:1.6;
+}
+
+h1,h2,h3{
+    color:#173b63;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    margin-top:15px;
+    margin-bottom:30px;
+    background:white;
+}
+
+th,td{
+    border:1px solid #bbb;
+    padding:10px;
+    vertical-align:top;
+}
+
+th{
+    background:#173b63;
+    color:white;
+}
+
+.good{
+    color:green;
+    font-weight:bold;
+}
+
+.bad{
+    color:#b00020;
+    font-weight:bold;
+}
+
+.best{
+    background:#d9f8d9;
+}
+
+code{
+    background:#ececec;
+    padding:2px 4px;
+    border-radius:3px;
+}
+
+.section{
+    background:white;
+    padding:25px;
+    margin-bottom:25px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.08);
+}
+
+ul{
+    margin-top:5px;
+}
+
+footer{
+    text-align:center;
+    margin-top:50px;
+    color:#555;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>Language Model Assignment Summary</h1>
+
+<p>
+This report summarises all experiments performed during the assignment,
+the final architecture, observations from every training run,
+and the reasoning behind selecting the final submitted checkpoint.
+The objective throughout the project was to minimise development
+Bits-Per-Byte (BPB) while remaining below the 2 million parameter limit.
+</p>
+
+<div class="section">
+
+<h2>Project Objective</h2>
+
+<p>
+The starter implementation consisted of a small decoder-only Transformer
+trained on a byte-level tokenizer.
+The goal of the assignment was to improve language modelling performance
+through architectural changes, optimisation improvements and better
+training strategies while respecting the parameter budget and training
+constraints.
+</p>
+
+<p>
+Rather than applying arbitrary modifications, every experiment was treated
+as a hypothesis. After each training run the development BPB was analysed,
+the changes were evaluated and only successful modifications were retained.
+This report therefore documents both successful and unsuccessful experiments.
+</p>
+
+</div>
+
+<div class="section">
+
+<h2>Final Submitted Architecture</h2>
+
+<table>
+
+<tr>
+<th>Component</th>
+<th>Final Value</th>
+<th>Reason</th>
+</tr>
+
+<tr>
+<td>Transformer Layers</td>
+<td>6</td>
+<td>Higher modelling capacity while remaining below the parameter limit.</td>
+</tr>
+
+<tr>
+<td>Embedding Dimension</td>
+<td>160</td>
+<td>Largest width that comfortably fit under the 2M parameter budget.</td>
+</tr>
+
+<tr>
+<td>Attention Heads</td>
+<td>5</td>
+<td>Maintains equal head dimension (160 / 5 = 32).</td>
+</tr>
+
+<tr>
+<td>Context Length</td>
+<td>256</td>
+<td>Improved modelling of longer contexts without significantly increasing optimisation difficulty.</td>
+</tr>
+
+<tr>
+<td>Weight Tying</td>
+<td>Enabled</td>
+<td>Shares embedding and output projection weights, reducing redundant parameters.</td>
+</tr>
+
+<tr>
+<td>Dropout</td>
+<td>0.05</td>
+<td>Provided regularisation while preserving optimisation speed.</td>
+</tr>
+
+<tr>
+<td>Batch Size</td>
+<td>16</td>
+<td>Reduced gradient variance and improved optimisation stability.</td>
+</tr>
+
+<tr>
+<td>Warmup</td>
+<td>200 Steps</td>
+<td>Prevented unstable updates during early optimisation.</td>
+</tr>
+
+<tr>
+<td>Learning Rate</td>
+<td>3e-4</td>
+<td>Produced the best convergence among tested configurations.</td>
+</tr>
+
+<tr>
+<td>Learning Rate Schedule</td>
+<td>Cosine Decay + Warmup</td>
+<td>Large updates initially followed by gradual refinement.</td>
+</tr>
+
+<tr>
+<td>Gradient Clipping</td>
+<td>1.0</td>
+<td>Prevented exploding gradients.</td>
+</tr>
+
+<tr>
+<td>Initialisation</td>
+<td>Normal (std = 0.02)</td>
+<td>More suitable for Transformer optimisation than the original 0.05.</td>
+</tr>
+
+<tr>
+<td>Total Parameters</td>
+<td>1,937,920</td>
+<td>Within the required 2 million parameter limit.</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>Training Runs</h2>
+
+<table>
+
+<tr>
+
+<th>Run</th>
+
+<th>Main Changes</th>
+
+<th>Train Loss</th>
+
+<th>Dev BPB</th>
+
+<th>Observation</th>
+
+</tr>
+
+<tr>
+
+<td>Run 1</td>
+
+<td>
+
+<ul>
+
+<li>Weight tying</li>
+
+<li>Initialisation std 0.02</li>
+
+<li>Cosine LR schedule</li>
+
+<li>Gradient clipping</li>
+
+<li>Block size 256</li>
+
+<li>6 layers</li>
+
+<li>160 embedding</li>
+
+<li>5 attention heads</li>
+
+</ul>
+
+</td>
+
+<td>1.9535</td>
+
+<td>2.6716</td>
+
+<td class="good">
+Large improvement over the starter implementation.
+</td>
+
+</tr>
+
+<tr class="best">
+
+<td>Run 2</td>
+
+<td>
+
+<ul>
+
+<li>Batch size 16</li>
+
+<li>Warmup 200</li>
+
+<li>Dropout 0.05</li>
+
+</ul>
+
+</td>
+
+<td><b>1.9113</b></td>
+
+<td><b>2.5578</b></td>
+
+<td class="good">
+Best overall configuration.
+</td>
+
+</tr>
+
+<tr>
+
+<td>Run 3</td>
+
+<td>
+
+<ul>
+
+<li>GPT-style initialisation</li>
+
+<li>Bias-free attention projections</li>
+
+<li>Approximate GELU</li>
+
+</ul>
+
+</td>
+
+<td>1.9354</td>
+
+<td>2.6174</td>
+
+<td class="bad">
+Performance decreased.
+</td>
+
+</tr>
+
+<tr>
+
+<td>Run 4</td>
+
+<td>
+
+<ul>
+
+<li>Block size 384</li>
+
+<li>Learning rate 2e-4</li>
+
+<li>Retained GELU approximation</li>
+
+</ul>
+
+</td>
+
+<td>2.0209</td>
+
+<td>2.7267</td>
+
+<td class="bad">
+Worst performance among modified models.
+</td>
+
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>Technical Discussion</h2>
+
+<h3>Run 1</h3>
+
+<p>
+
+The first experiment focused on improving both optimisation and model capacity.
+Increasing the number of transformer layers, embedding dimension and context
+length significantly increased representational power while remaining below the
+parameter budget.
+
+Enabling weight tying reduced parameter redundancy by sharing the embedding
+matrix and output projection. The additional optimisation improvements,
+particularly cosine learning-rate decay and gradient clipping, resulted in
+stable optimisation throughout training.
+
+Overall this experiment established a substantially stronger baseline.
+
+</p>
+
+<h3>Run 2</h3>
+
+<p>
+
+The second experiment produced the best result.
+
+Doubling the batch size reduced stochastic gradient noise,
+producing smoother optimisation and consistently lower training loss.
+
+Increasing warmup to 200 steps prevented excessively large updates during
+the earliest training iterations, improving optimisation stability.
+
+Introducing a small dropout probability of 0.05 improved generalisation
+without noticeably slowing convergence.
+
+This experiment simultaneously reduced training loss and development BPB,
+indicating improvements in both optimisation quality and model generalisation.
+
+</p>
+
+<h3>Run 3</h3>
+
+<p>
+
+The third experiment investigated architectural modifications inspired by
+modern GPT implementations.
+
+Despite their popularity in large language models, GPT-style initialisation,
+bias removal and approximate GELU collectively reduced performance.
+
+The most likely explanation is that these techniques are beneficial for
+very large models trained on billions of tokens, whereas the assignment
+model is comparatively small and trained for only 2000 optimisation steps.
+
+Removing attention biases also reduces model flexibility during the early
+stages of optimisation, making learning slightly more difficult.
+
+This experiment demonstrated that techniques successful in production-scale
+models do not necessarily improve performance in small training regimes.
+
+</p>
+
+<h3>Run 4</h3>
+
+<p>
+
+The final experiment attempted to improve modelling capacity further by
+increasing the context length from 256 to 384 while simultaneously reducing
+the learning rate.
+
+Although longer contexts are generally desirable, they substantially increased
+the optimisation difficulty under the fixed budget of 2000 optimisation steps.
+
+At the same time, lowering the learning rate reduced optimisation speed.
+
+Consequently, the model failed to converge as effectively as Run 2,
+resulting in both higher training loss and significantly worse development BPB.
+
+This illustrates an important optimisation principle:
+increasing model capability alone is insufficient unless adequate optimisation
+resources are also available.
+
+</p>
+
+</div>
+
+<div class="section">
+
+<h2>Why Run 2 Was Selected</h2>
+
+<p>
+
+Run 2 achieved the lowest development BPB of <b>2.5578</b>,
+making it the best-performing model across all experiments.
+
+Although subsequent experiments explored more sophisticated architectural
+ideas, none produced lower BPB.
+
+The final checkpoint therefore corresponds to the Run 2 configuration because
+it provided the strongest balance between optimisation quality,
+generalisation performance and computational efficiency.
+
+The experiments also highlighted that careful optimisation improvements
+(batch size, warmup and moderate dropout) provided larger gains than adopting
+architectural techniques intended for substantially larger language models.
+
+</p>
+
+</div>
+
+<div class="section">
+
+<h2>Human vs Machine Contribution</h2>
+
+<p>
+
+The overall experimental process was driven by human decision making.
+The hypotheses for each experiment, interpretation of the training curves,
+selection of subsequent experiments and final evaluation of successful and
+unsuccessful modifications were all performed manually.
+
+An AI coding assistant was used to accelerate implementation by suggesting
+code modifications, explaining optimisation techniques and assisting in
+debugging implementation issues. The AI was also used to discuss possible
+architectural alternatives and explain expected optimisation behaviour.
+
+All experiments were independently executed by the author, with every proposed
+change being validated through actual training and development evaluation.
+Several AI-suggested modifications were rejected after empirical evaluation
+because they degraded development BPB, demonstrating that final decisions
+were based on experimental evidence rather than accepting generated code
+without verification.
+
+Overall, approximately 60–70% of the implementation effort (code generation,
+debugging assistance and documentation drafting) was assisted by AI, while
+30–40% of the work (experimental design, evaluation, interpretation of
+results, comparison of runs and final model selection) was performed through
+human judgement.
+
+</p>
+
+</div>
+
+<div class="section">
+
+<h2>Final Remarks</h2>
+
+<p>
+
+This project demonstrated that optimisation strategy was considerably more
+important than introducing increasingly complex architectural modifications.
+
+The largest improvements were obtained through increased model capacity,
+weight tying, improved optimisation, larger batch size, longer warmup and
+light regularisation.
+
+Subsequent experiments further reinforced the importance of empirical
+evaluation by showing that several theoretically appealing modifications
+actually reduced performance under the assignment constraints.
+
+The final submitted checkpoint therefore represents the best experimentally
+validated model obtained during the project.
+
+</p>
+
+</div>
+
+<footer>
+
+LLM Assignment Summary Report
+
+</footer>
+
+</body>
+</html>
